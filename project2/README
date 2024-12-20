@@ -1,0 +1,14 @@
+PROGRAM: Assignment 2
+Author: Vincent Barfield
+
+I've included a make file for graders use if they wish. It's been tested as well as the gcc method mentioned in the program specifications.
+
+Output should roughly match the output shown in the project specifications though the logs may not be in exact format specified.
+
+This program uses fork, shared memory, and execvp to accomplish a merge and quicksort. Everything runs concurrently and the output is printed at the end.
+
+NOTE: There is a file 'shared.h' that is included in each of the source files. This provides macros and include statements.
+
+I do not believe there are any race conditions.
+
+The main file provides args to qsort and merge by a char pointer array where the pointers are allocated on the stack.

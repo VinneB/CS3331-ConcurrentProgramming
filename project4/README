@@ -1,0 +1,58 @@
+CS3331: PROGRAM 4
+Vincent Barfield
+
+Using 0 late days.
+
+There is a macro defined in the header thread.h called DELAY_MOD which can be changed to a smaller value in order to shorten or lengthen delay time.
+Greater DELAY_MOD values will cause the program to run slower while smaller DELAY_MOD values will cause it to mun faster.
+
+1. The semaphore s_resources has a wait statement above the baby eagle 'eating' section. Mother eagle signals s_resources m times when it runs food_ready.
+ During the time when mother eagle is running food_ready, the babies are unable to eat due to the resource_mutex semaphore. Furthermore, the mother
+ eagle is only woken up once all the eagles are done eating. Therefore, the entry and exit sections of the eating section ensure only m threads are
+ in the eating section at one time.
+
+2. If a pot has been used (i.e. is empty) or a pot is in use, then s_resources has been waited on. Inside the ready_to_eat function, a thread
+ gets the next pot and no thread can get a pot prior to that pot's id number. Since grabbing this resource is inside a critical section locked by
+ a mutex, we guarantee that no empty pot is used and no pot is used by two threads at the same time. Once m eagles have grabbed a resource, then
+ s_resources.count = 0 and eagles must then wait until the mother refills the pots.
+
+3. For examples, let's assume m-1 eagles have waited on s_resources after the mother eagle has refilled the resources. Then, if a eagle a eagle is
+ ready to eat, he will call s_resources->Wait() and s_resources.count = 1. So, this eagle is let through. Furthermore, since m-1 eagles have been
+ let through, pot m is full and unused so it is available for the eagle.
+
+4. Once a thread waits on s_resource, it gets a pot k. The next thread gets k+1. This addition and grabbing of the pot is inside a critical section
+managed by semaphore resource_mutex. Since threads get pot k+1 and the threads are unable to proceed until the mother refills the pots, once a pot k
+is used by a thread, any subsequent threads will be given a pot x where k < x <= m. This means no empty pots are grabbed.
+
+5. The logic for this question is similar to the previous. Since the pot used is incremented by 1 inside a critical section for each thread, 
+guaranteed by semaphore resource_mutex, no two threads will have access to the same pot on the same iteration.
+
+6. Every time a thread enters the finish eating critical section, it decrements resources by 1. Resources initially, set by the mother, equals m.
+ Therefore, after m threads have finished eating, resources equals zero. Additionally, sleep_signalled initally equals zero, set by the mother. These 
+are the two conditions necessary for a thread ready to eat to wake up the mother. So, one thread does wake up the mother once all threads have eaten 
+and it does this in a locked critical section. Notice since the condition is checked inside the critical section, once the critical section is unlocked,
+any other threads waiting on resource_mutex must check the condition. This will evaluate to false each time since, inside the critical section, the 
+thread i that signaled/woke the mother sets sleep_signaled = i != 0. Therefore, since the condition evaulates to false after the first thread, only
+one baby eagle wakes the mother.
+
+7. The mother eagle waits on signal semaphore do_sleep = 0 in the function goto_sleep. All functionality is after this semaphore wait. A baby eagle 
+signals do_sleep which releases the mother from the do_sleep waiting queue allowing her to run. Nothing else signals do_sleep. Therefore, the mother
+will only do her work if a baby eagle wakes her.
+
+8. In order for a baby eagle to wake up the mother, it must proceed through the mutex semaphore recource_mutex. This mutex is locked (i.e. waited on)
+by the mother from beginning to end of her work. Therefore, no baby eagle thread can proceed through this mutex in order to wake up the mother until
+she is done preparing food. 
+
+9. The logic here is similar to previous question. In order for a baby eagle to eat, it must proceed through semaphore resource_mutex. The mother has
+that locked until she fills all m pots. So, until all m pots are filled, no baby eagle can proceed to the eat section.
+
+10. After refilling the pots, the mother unlocks (i.e. signals) the resource_mutex. This allows baby eagles to obtain a pot and proceed to the eat
+section. Following this, the mother thread hits a Delay and then waits on do_sleep i.e. she sleeps.
+
+11. This is implemented through the use of an additional 'psuedo-cycle' and signals. If the program is setup to run for 't' feeding cycles, then the
+mother thread runs t-1 cycles as normal. However, on her t'th refilling, she enters a different code section that also waits on the do_sleep semaphore.
+By the baby eagle thread implementation, do_sleep is signalled once all baby eagle threads have finished eating, at which point termination can occur
+and it will be considered graceful. After the do_sleep semaphore is signalled, the mother signals the end_main semaphore and terminates herself. 
+Throughout the execution of this program, main has been in the waiting queue of the end_main semaphore. After the mother signals, the main proceeds to
+send out a SIGINT signal to it's own PID. Since we are using user threads and not different processes, all threads share the same pid so each one will
+be subject to the signal. I have implemented a sigaction that catches the SIGINT signal and calls Exit(), ensuring graceful termination.

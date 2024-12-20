@@ -1,0 +1,41 @@
+README
+Author: Vincent Barfield (vsbarfie)
+
+Slip days used: 3
+
+Question 1:
+	There are no race conditions. For iteration 'i' of the prefix sum algorithm, each thread 'j' writes to the value b[i][j] and reads from array
+	b[i-1]. Therefore, in a given iteration, there are no recources which are read and written to. Furthermore, there are no recources that have
+	two writes being performed on it. So, in a given iteration, all values read from are not modified over the course of the entire iteration and
+	all write locations are distinct from each other. This eliminates any possibility of race conditions.
+
+Question 2:
+	With our current implementation, no we cannot read and write to a single array 'x'. This is because we can't predict what order thread read and
+	writes will be done. So, if thread 'j' writes it's result to x[j] and then thread j+2^(h-1) tries to read that location, it will get the newly
+	computed value instead of the original one. This will cause random, incorrect results.
+
+Question 3:
+	Let thread 'j' have an array of length 'n' called 'x_copy' which is a copy of the original array 'x' and a integer 'sum'. Then, thread 'j'
+	could sum through x[j] to x[n] iteratively, storing the intermediate results in variable 'sum'. Then, after (n-j) iterations, it could store
+	the final result in x[j]. As long as you construct all 'n' threads prior to running them, there are no shared recources and, as such, we
+	are not subject to the randomness pitfalls of concurrency.
+
+Question 4:
+	Let x[n] = x_0, x_1, ..., x_n and B[k][n] = 0 for all k and n s.t. n: size of x and n = 2^l for some integer l , k: k = log_2(n). Let B[0] = x[].
+ Also, let T_0, T_1, ..., T_j, ..., T_n be threads that will compute the prefix sum for x[0], x[1], ..., x[j], ..., x[n] respectively.
+	Base Case: T_0
+		Iteration 1: (j = 0) and (i = 1) => (j - (2^(i-1))) = (0 - (2^0)) = -1 . Since (-1 < 0) = 1, T_0 copies B[0][1] to B[1][1]. B[1][1] = x_0.
+		Iteration 2, 3, ..., k: Since for all i > 1, (j - (2^(i-1))) < 0) = 1, every iteration copies without adding. So B[k][1] = x_0. x_0 is the
+			prefix sum for x[0]. Therefore, the base case holds.
+	Inductive Hypothesis: Assume that T_1, T_2, ..., T_j has computed it's intermediary prefix sum correctly for every i.
+	Inductive Step: T_j+1
+		Iteration 1: (j = j+1) and (i = 1) => (j+1 - (2^(i-1))) = (j+1 - 1) = j >= 0. Therefore, B[1][j+1] = B[0][j+1] + B[0][j]. Since B[0] = x[], this
+			is correct trivial. So, B[1][j+1] = x_(j+1) + x_j.
+		Iteration 2: (j = j+1) and (i = 2) => (j+1 - (2^(i-1))) = (j+1 - 2) >= 0. Therefore, B[2][j+1] = B[1][j+1] + B[1][j-1]. By the inductive
+			hypothesis, B[1][j-1] was computed correctly i.e. B[1][j-1] = x_j-1 + x_j-2. So, B[2][j+1] = x_j+1, x_j, x_j-1, x_j-2.
+	Iteration m: (j = j+1) and (i = m) => (j+1 - (2^m-1)):
+		If (j+1 - (2^m-1)) >= 0, then B[m][j+1] = B[m-1][j+1] + b[m-1][j+1 - (2^m-1)]. Since (2^m-1) > 1, we know by the inductive hypothesis that
+			B[m-1][j+1 - (2^m-1)] = B[m-1][z], for some z < j+1, is correct. Therefore, B[m][j+1] is correct.
+		If (j+1 - (2^m-1)) < 0, then B[m][j+1] = B[m-1][j+1]. We know B[m-1][j+1] is correct by the logic above. From this point on, this value is 
+		just copied until iteration k.
+	Iteration k: B[k][j+1] = x_(j+1), x_j, ..., x_1. This is the correct prefix sum for x[j+1]. Therefore, our algorithm is correct. --QED--

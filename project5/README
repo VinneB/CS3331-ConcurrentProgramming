@@ -1,0 +1,31 @@
+README FILE - Author: Vincent Barfield
+
+1. The program works because all the control for the program (conditions, booleans, counters) are defined in the monitor. Mutual exclusion is guaranteed.
+So when a thread controls the flow of the program, say by modifying isPassengersReady, race conditions don't occur.
+
+2. Once a safe load is possible, the last passenger thread necessary for that safe load signals the threads for a safe passenger who then all add their 
+info to the departure roster. They are then waiting at a condition which is only released by monitor once the boat journey has completed.
+
+3. POLICY:
+    If last passenger, necessary for a safe boat load, is a cannibal:
+        If (c_arrived == 3) or ((m_arrived >= 2) and (c_arrived == 1)):
+            if (c_arrived == 3):
+                3 cannibals
+            else: 
+                2 missionaries and 1 cannibal
+    If last passenger, necessary for a safe boat load, is a missionary
+        if ((m_arrived == 3) or ((m_arrived == 2) and (c_arrived >= 1))):
+            if (m_arrived == 3):
+                3 missionaries
+            else:
+                2 missionaries and 1 cannibal
+
+4. 
+    a. Inside MissionaryArrives and CannibalArrives, threads wait on condition eventDisembark. This is only signaled once the departure is finished.
+
+    b. All 'jumping off' can only occur by the boat thread. This jumping of is preceded in execution flow by the end of the boat journey. All of 'jumping on'
+    can only occur if isPassengersReady == 0. However, through all of the journey, isPassengersReady = 1.
+
+    c. A thread is on the boat if it is waiting on eventDisembark. Preceding waiting on eventDisembark, a thread must register by execution flow.
+
+    d. Threads that are on the boat are waiting on the eventDisembark condition. This condition is only signaled once the journey has completed.
